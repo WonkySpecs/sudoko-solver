@@ -7,11 +7,8 @@
 (def num-boxes-y 
 	3)
 
-(def test-grid-9
-	[[1 2 0] [4 0 6] [0 8 0]])
-
-(def test-grid-81
-	[[0 0 5 0 6 8 7 0 9] [6 0 7 1 0 0 0 0 8] [0 0 3 0 7 2 0 0 0] [0 0 0 0 4 0 0 7 0] [0 0 2 0 1 0 8 0 0][0 1 0 0 2 0 0 0 0] [0 0 0 7 3 0 4 0 0] [2 0 0 0 0 9 1 0 7] [8 0 4 2 5 0 3 0 0]])
+(def max-val
+	9)
 
 (defn select-range
 	"Inclusive of end, exclusive of start"
@@ -51,7 +48,15 @@
 	[grid value [x y]]
 	(assoc-in grid [y x] value))
 
+(defmacro next-val-or-backtrack
+	[v]
+	`(if (= max-val ~v)
+		false
+		(recur (inc ~v))))
+
 (defn find-valid-number
+	"Implements recursive backtracking - try a value in a blank cell. If the grid is valid, recurse to the next blank.
+	 Otherwise, try the next possible value. If there are no more values to try for the cell, go back to the previoius cell."
 	[grid coord [next-blank & remaining :as all-remaining]]
 	(loop [value 1]
 		(let [try-grid (grid-with-value grid value coord)]
@@ -60,13 +65,9 @@
 					(let [next-try (find-valid-number try-grid next-blank remaining)]
 						(if next-try
 							next-try
-							(if (= 9 value)
-								false
-								(recur (inc value)))))
-					(str "SOLVED: " try-grid))
-				(if (= 9 value)
-					false
-					(recur (inc value)))))))
+							(next-val-or-backtrack value)))
+					try-grid)
+				(next-val-or-backtrack value)))))
 
 (defn solve
 	[clue-grid]
@@ -74,12 +75,12 @@
 		(let [[first-blank & remaining-blanks] (filter (fn [[x y]] (= (nth (nth clue-grid y) x) 0)) all-coords)]
 			(find-valid-number clue-grid first-blank remaining-blanks))))
 
-
 (defn -main
-	"Sudoko solver. Expects input sudoko to be a sequence of sequences"
-	[]
-	(println "GO")
-	(let [grid test-grid-81]
+	"Sudoko solver. Expects input to be string literal of a sequence of sequences of numbers. 0 represents a blank to be solved"
+	[in]
+	(let [grid (read-string in)]
 		(if (grid-valid? grid)
-			(println (solve grid))
+			(let [solved (solve grid)]
+				(println "Solved: " solved)
+				solved)
 			(println "Invalid input grid"))))
